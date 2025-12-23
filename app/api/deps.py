@@ -6,7 +6,7 @@ from app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login/access-token", auto_error=False)
 
-async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
+async def validate_token_with_auth_service(token: str) -> dict:
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -20,8 +20,6 @@ async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
                 settings.AUTH_VERIFY_URL,
                 json={"jwtToken": token}
             )
-            # We don't necessarily raise for status code because the API might return 200 with success: false
-            # adhering to the user spec, but let's be safe and check json content.
         except httpx.RequestError as exc:
              raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -44,3 +42,6 @@ async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
         )
         
     return data.get("data", {}).get("user")
+
+async def verify_token(token: str = Depends(oauth2_scheme)) -> dict:
+    return await validate_token_with_auth_service(token)
